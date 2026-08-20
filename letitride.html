@@ -1,0 +1,864 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cassino Virtual — Modo Experimental</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --felt-deep: #0b3d2e;
+    --felt: #123f2f;
+    --felt-light: #1a5240;
+    --brass: #c9a227;
+    --brass-bright: #e2c25a;
+    --paper: #efe6d3;
+    --paper-dim: #d8cdb3;
+    --wine: #8b1e3f;
+    --wine-bright: #b23655;
+    --ink: #14120d;
+    --line: rgba(239,230,211,0.14);
+  }
+
+  *{ box-sizing:border-box; }
+
+  html,body{
+    margin:0; padding:0;
+    background: var(--felt-deep);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    min-height:100vh;
+  }
+
+  body{
+    background:
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(201,162,39,0.10), transparent 60%),
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.06) 0px, rgba(0,0,0,0.06) 1px, transparent 1px, transparent 3px),
+      var(--felt-deep);
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  .wrap{
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 28px 20px 80px;
+  }
+
+  header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom: 1px solid var(--line);
+    padding-bottom:18px;
+    margin-bottom: 26px;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .eyebrow{
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--brass);
+    opacity: 0.85;
+    margin: 0 0 6px;
+  }
+
+  h1{
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: clamp(30px, 5vw, 44px);
+    margin: 0;
+    color: var(--paper);
+    letter-spacing: 0.01em;
+  }
+
+  .subtitle{
+    font-size: 12px;
+    color: var(--paper-dim);
+    max-width: 30ch;
+    line-height: 1.5;
+    text-align: right;
+  }
+
+  .ledger-strip{
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    background: linear-gradient(180deg, var(--felt-light), var(--felt));
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 16px 22px;
+    margin-bottom: 28px;
+    position: relative;
+    overflow: hidden;
+  }
+  .ledger-strip::before{
+    content:"";
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(90deg, transparent, transparent 38px, rgba(201,162,39,0.06) 38px, rgba(201,162,39,0.06) 39px);
+    pointer-events:none;
+  }
+  .balance-label{
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+  }
+  .balance-value{
+    font-family: 'Fraunces', serif;
+    font-weight: 600;
+    font-size: clamp(28px, 6vw, 40px);
+    color: var(--brass-bright);
+    font-variant-numeric: tabular-nums;
+    transition: color 0.3s;
+  }
+  .balance-value.up{ color: #7fd99a; }
+  .balance-value.down{ color: var(--wine-bright); }
+  .balance-sub{
+    font-size: 11px;
+    color: var(--paper-dim);
+    text-align:right;
+  }
+
+  .tabs{
+    display:flex;
+    gap: 2px;
+    margin-bottom: 20px;
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    overflow:hidden;
+  }
+  .tab{
+    flex:1;
+    background: rgba(255,255,255,0.02);
+    border:none;
+    color: var(--paper-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 13px 8px;
+    cursor:pointer;
+    border-right: 1px solid var(--line);
+    transition: background 0.2s, color 0.2s;
+  }
+  .tab:last-child{ border-right:none; }
+  .tab:hover{ background: rgba(201,162,39,0.08); color: var(--paper); }
+  .tab.active{
+    background: var(--brass);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .tab:focus-visible, button:focus-visible, input:focus-visible{
+    outline: 2px solid var(--brass-bright);
+    outline-offset: 2px;
+  }
+
+  .panel{
+    background: rgba(0,0,0,0.18);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 28px;
+    margin-bottom: 20px;
+    min-height: 280px;
+  }
+
+  .game-title{
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 22px;
+    margin: 0 0 4px;
+    color: var(--brass-bright);
+  }
+  .game-desc{
+    font-size: 12px;
+    color: var(--paper-dim);
+    margin: 0 0 22px;
+    line-height:1.5;
+  }
+
+  .stage{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-height: 110px;
+    margin-bottom: 22px;
+    font-size: 52px;
+    gap: 14px;
+    letter-spacing: 6px;
+  }
+  .stage .empty-hint{
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    color: var(--paper-dim);
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+
+  .coin, .die-face, .reel{
+    display:inline-block;
+  }
+  @keyframes flip{
+    0%{ transform: rotateY(0deg) scale(1); }
+    50%{ transform: rotateY(900deg) scale(1.15); }
+    100%{ transform: rotateY(1800deg) scale(1); }
+  }
+  @keyframes tumble{
+    0%{ transform: rotate(0deg); }
+    60%{ transform: rotate(540deg); }
+    100%{ transform: rotate(720deg); }
+  }
+  @keyframes pop{
+    0%{ transform: scale(0.4); opacity:0; }
+    70%{ transform: scale(1.08); opacity:1; }
+    100%{ transform: scale(1); }
+  }
+  .anim-flip{ animation: flip 0.7s ease-out; }
+  .anim-tumble{ animation: tumble 0.6s ease-out; }
+  .anim-pop{ animation: pop 0.35s ease-out; }
+
+  .result-line{
+    text-align:center;
+    font-size: 13px;
+    min-height: 18px;
+    margin-bottom: 20px;
+    letter-spacing: 0.02em;
+  }
+  .result-line.win{ color:#7fd99a; }
+  .result-line.lose{ color: var(--wine-bright); }
+  .result-line.push{ color: var(--brass-bright); }
+
+  .controls{
+    display:flex;
+    flex-wrap: wrap;
+    gap: 14px;
+    align-items:flex-end;
+    justify-content:center;
+  }
+  .field{
+    display:flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field label{
+    font-size: 10px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+  }
+  input[type="number"]{
+    background: var(--ink);
+    border: 1px solid var(--line);
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 14px;
+    padding: 10px 12px;
+    border-radius: 2px;
+    width: 130px;
+  }
+
+  .chip-row{
+    display:flex;
+    gap:6px;
+  }
+  .chip-btn{
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    border: 2px dashed rgba(239,230,211,0.4);
+    background: transparent;
+    color: var(--paper);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    cursor:pointer;
+    transition: transform 0.15s, background 0.15s;
+  }
+  .chip-btn:hover{ transform: translateY(-2px); background: rgba(201,162,39,0.12); }
+
+  .choice-row{
+    display:flex;
+    gap: 8px;
+  }
+  .choice-btn{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--paper-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 10px 16px;
+    border-radius: 2px;
+    cursor:pointer;
+    transition: all 0.15s;
+  }
+  .choice-btn.selected{
+    background: var(--brass);
+    color: var(--ink);
+    border-color: var(--brass);
+    font-weight:600;
+  }
+
+  .die-picker{
+    display:flex;
+    gap: 6px;
+  }
+  .die-picker button{
+    width: 36px; height:36px;
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--paper-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    border-radius: 2px;
+    cursor:pointer;
+  }
+  .die-picker button.selected{
+    background: var(--brass);
+    color: var(--ink);
+    border-color: var(--brass);
+    font-weight:600;
+  }
+
+  .play-btn{
+    background: var(--wine);
+    color: var(--paper);
+    border: 1px solid var(--wine-bright);
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 17px;
+    padding: 11px 30px;
+    border-radius: 2px;
+    cursor:pointer;
+    transition: background 0.15s, transform 0.1s;
+  }
+  .play-btn:hover:not(:disabled){ background: var(--wine-bright); }
+  .play-btn:active:not(:disabled){ transform: scale(0.97); }
+  .play-btn:disabled{ opacity:0.4; cursor:not-allowed; }
+
+  .odds-note{
+    text-align:center;
+    font-size: 10px;
+    color: var(--paper-dim);
+    opacity:0.7;
+    margin-top: 18px;
+    letter-spacing: 0.03em;
+  }
+
+  .ledger{
+    background: rgba(0,0,0,0.18);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    padding: 22px 24px;
+  }
+  .ledger h2{
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 18px;
+    margin: 0 0 4px;
+    color: var(--brass-bright);
+  }
+  .ledger .ledger-sub{
+    font-size: 11px;
+    color: var(--paper-dim);
+    margin: 0 0 16px;
+  }
+
+  .stat-grid{
+    display:grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px,1fr));
+    gap: 14px;
+    margin-bottom: 18px;
+    padding-bottom: 18px;
+    border-bottom: 1px dashed var(--line);
+  }
+  .stat{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .stat .k{
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--paper-dim);
+  }
+  .stat .v{
+    font-family: 'Fraunces', serif;
+    font-weight:600;
+    font-size: 19px;
+    color: var(--paper);
+    font-variant-numeric: tabular-nums;
+  }
+  .stat .v.pos{ color: #7fd99a; }
+  .stat .v.neg{ color: var(--wine-bright); }
+
+  .history-list{
+    max-height: 220px;
+    overflow-y: auto;
+    display:flex;
+    flex-direction: column-reverse;
+    gap: 0;
+  }
+  .history-row{
+    display:grid;
+    grid-template-columns: 70px 1fr auto auto;
+    gap: 10px;
+    align-items:center;
+    font-size: 12px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--line);
+  }
+  .history-row:first-child{ border-bottom:none; }
+  .history-row .g{ color: var(--paper-dim); text-transform: uppercase; font-size:10px; letter-spacing:0.05em; }
+  .history-row .r{ color: var(--paper-dim); }
+  .history-row .a{ color: var(--paper-dim); text-align:right; }
+  .history-row .d{ text-align:right; font-weight:600; font-variant-numeric: tabular-nums; }
+  .history-row .d.pos{ color:#7fd99a; }
+  .history-row .d.neg{ color: var(--wine-bright); }
+
+  .empty-ledger{
+    font-size: 12px;
+    color: var(--paper-dim);
+    text-align:center;
+    padding: 20px 0;
+    opacity:0.7;
+  }
+
+  .reset-row{
+    margin-top: 18px;
+    text-align:center;
+  }
+  .reset-btn{
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--paper-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    padding: 9px 18px;
+    border-radius: 2px;
+    cursor:pointer;
+  }
+  .reset-btn:hover{ color: var(--paper); border-color: var(--brass); }
+
+  .bust-banner{
+    display:none;
+    text-align:center;
+    background: var(--wine);
+    color: var(--paper);
+    font-family: 'DM Serif Display', serif;
+    font-style: italic;
+    font-size: 18px;
+    padding: 16px;
+    border-radius: 3px;
+    margin-bottom: 20px;
+  }
+  .bust-banner.show{ display:block; animation: pop 0.4s ease-out; }
+
+  footer{
+    text-align:center;
+    font-size: 10px;
+    color: var(--paper-dim);
+    opacity: 0.5;
+    margin-top: 40px;
+    letter-spacing: 0.05em;
+  }
+
+  @media (max-width: 560px){
+    header{ flex-direction: column; align-items:flex-start; }
+    .subtitle{ text-align:left; }
+    .ledger-strip{ flex-direction:column; align-items:flex-start; gap:8px; }
+    .balance-sub{ text-align:left; }
+    .history-row{ grid-template-columns: 55px 1fr auto; }
+    .history-row .a{ display:none; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Simulador &nbsp;·&nbsp; Fichas fictícias, sem dinheiro real</p>
+      <h1>Cassino LET IT RIDE</h1>
+    </div>
+    <p class="subtitle">Um estudo de probabilidade em três mesas. Nenhuma ficha aqui vale nada fora desta página.</p>
+  </header>
+
+  <div class="bust-banner" id="bustBanner">Sem fichas na mesa. A sessão foi encerrada — confira o livro-caixa abaixo.</div>
+
+  <div class="ledger-strip">
+    <div>
+      <p class="balance-label">Saldo em fichas</p>
+      <p class="balance-value" id="balanceValue">100.00</p>
+    </div>
+    <p class="balance-sub" id="balanceSub">0 rodadas jogadas</p>
+  </div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab active" data-game="coin" role="tab" aria-selected="true">Cara ou coroa</button>
+    <button class="tab" data-game="dice" role="tab" aria-selected="false">Dado da sorte</button>
+    <button class="tab" data-game="slot" role="tab" aria-selected="false">Caça-níquel</button>
+  </div>
+
+  <!-- COIN PANEL -->
+  <div class="panel" id="panel-coin">
+    <h2 class="game-title">Cara ou coroa</h2>
+    <p class="game-desc">Escolha um lado. Acertando, você dobra a aposta. Pagamento 2× — chance justa de ~50%.</p>
+    <div class="stage" id="stage-coin"><span class="empty-hint">aguardando aposta</span></div>
+    <div class="result-line" id="result-coin"></div>
+    <div class="controls">
+      <div class="field">
+        <label for="bet-coin">Aposta</label>
+        <input type="number" id="bet-coin" min="1" step="1" value="10">
+      </div>
+      <div class="chip-row">
+        <button class="chip-btn" data-target="bet-coin" data-val="5">+5</button>
+        <button class="chip-btn" data-target="bet-coin" data-val="10">+10</button>
+        <button class="chip-btn" data-target="bet-coin" data-val="25">+25</button>
+      </div>
+      <div class="field">
+        <label>Escolha</label>
+        <div class="choice-row">
+          <button class="choice-btn selected" data-choice="cara">Cara</button>
+          <button class="choice-btn" data-choice="coroa">Coroa</button>
+        </div>
+      </div>
+      <button class="play-btn" id="play-coin">Apostar</button>
+    </div>
+    <p class="odds-note">Vitória: +100% da aposta &nbsp;·&nbsp; Derrota: −100% da aposta</p>
+  </div>
+
+  <!-- DICE PANEL -->
+  <div class="panel" id="panel-dice" style="display:none">
+    <h2 class="game-title">Dado da sorte</h2>
+    <p class="game-desc">Escolha um número de 1 a 6. Acertando, o pagamento é 6× o valor apostado. Chance de ~16,7%.</p>
+    <div class="stage" id="stage-dice"><span class="empty-hint">aguardando aposta</span></div>
+    <div class="result-line" id="result-dice"></div>
+    <div class="controls">
+      <div class="field">
+        <label for="bet-dice">Aposta</label>
+        <input type="number" id="bet-dice" min="1" step="1" value="10">
+      </div>
+      <div class="chip-row">
+        <button class="chip-btn" data-target="bet-dice" data-val="5">+5</button>
+        <button class="chip-btn" data-target="bet-dice" data-val="10">+10</button>
+        <button class="chip-btn" data-target="bet-dice" data-val="25">+25</button>
+      </div>
+      <div class="field">
+        <label>Número</label>
+        <div class="die-picker" id="diePicker">
+          <button class="selected" data-n="1">1</button>
+          <button data-n="2">2</button>
+          <button data-n="3">3</button>
+          <button data-n="4">4</button>
+          <button data-n="5">5</button>
+          <button data-n="6">6</button>
+        </div>
+      </div>
+      <button class="play-btn" id="play-dice">Apostar</button>
+    </div>
+    <p class="odds-note">Vitória: +500% da aposta (paga 6×) &nbsp;·&nbsp; Derrota: −100% da aposta</p>
+  </div>
+
+  <!-- SLOT PANEL -->
+  <div class="panel" id="panel-slot" style="display:none">
+    <h2 class="game-title">Caça-níquel</h2>
+    <p class="game-desc">Três símbolos, três chances de combinação. Trinca paga um multiplicador; duas iguais devolvem metade da aposta.</p>
+    <div class="stage" id="stage-slot">
+      <span class="reel">🎰</span><span class="reel">🎰</span><span class="reel">🎰</span>
+    </div>
+    <div class="result-line" id="result-slot"></div>
+    <div class="controls">
+      <div class="field">
+        <label for="bet-slot">Aposta</label>
+        <input type="number" id="bet-slot" min="1" step="1" value="10">
+      </div>
+      <div class="chip-row">
+        <button class="chip-btn" data-target="bet-slot" data-val="5">+5</button>
+        <button class="chip-btn" data-target="bet-slot" data-val="10">+10</button>
+        <button class="chip-btn" data-target="bet-slot" data-val="25">+25</button>
+      </div>
+      <button class="play-btn" id="play-slot">Girar</button>
+    </div>
+    <p class="odds-note">🍒×3 = 3× &nbsp;·&nbsp; 🍋×3 = 5× &nbsp;·&nbsp; 🍉×3 = 8× &nbsp;·&nbsp; ⭐×3 = 15× &nbsp;·&nbsp; 7️⃣×3 = 50× &nbsp;·&nbsp; par = devolve metade</p>
+  </div>
+
+  <div class="ledger">
+    <h2>Livro-caixa</h2>
+    <p class="ledger-sub">Registro de todas as rodadas desta sessão.</p>
+
+    <div class="stat-grid">
+      <div class="stat"><span class="k">Rodadas</span><span class="v" id="statRounds">0</span></div>
+      <div class="stat"><span class="k">Taxa de vitória</span><span class="v" id="statWinRate">—</span></div>
+      <div class="stat"><span class="k">Total apostado</span><span class="v" id="statBet">0.00</span></div>
+      <div class="stat"><span class="k">Resultado líquido</span><span class="v" id="statNet">0.00</span></div>
+    </div>
+
+    <div class="history-list" id="historyList">
+      <div class="empty-ledger">Nenhuma aposta registrada ainda.</div>
+    </div>
+
+    <div class="reset-row">
+      <button class="reset-btn" id="resetBtn">Reiniciar sessão (100 fichas)</button>
+    </div>
+  </div>
+
+  <footer>Cassino Virtual — fichas simuladas, uso educacional para estudo de probabilidade.</footer>
+</div>
+
+<script>
+(function(){
+  const state = {
+    saldo: 100,
+    historico: [],
+    coinChoice: 'cara',
+    diceChoice: 1,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const balanceValue = $('balanceValue');
+  const balanceSub = $('balanceSub');
+  const bustBanner = $('bustBanner');
+
+  function fmt(n){
+    const sign = n < 0 ? '-' : '';
+    return sign + Math.abs(n).toFixed(2);
+  }
+
+  function busted(){
+    return state.saldo <= 0;
+  }
+
+  function refreshHeader(prevSaldo){
+    balanceValue.textContent = state.saldo.toFixed(2);
+    balanceValue.classList.remove('up','down');
+    if(prevSaldo !== undefined){
+      if(state.saldo > prevSaldo) balanceValue.classList.add('up');
+      else if(state.saldo < prevSaldo) balanceValue.classList.add('down');
+    }
+    balanceSub.textContent = state.historico.length + (state.historico.length === 1 ? ' rodada jogada' : ' rodadas jogadas');
+
+    const allBtns = document.querySelectorAll('.play-btn');
+    if(busted()){
+      allBtns.forEach(b => b.disabled = true);
+      bustBanner.classList.add('show');
+    } else {
+      allBtns.forEach(b => b.disabled = false);
+      bustBanner.classList.remove('show');
+    }
+  }
+
+  function registrar(jogo, aposta, resultado, ganho){
+    state.historico.push({jogo, aposta, resultado, ganho});
+    refreshLedger();
+  }
+
+  function refreshLedger(){
+    const n = state.historico.length;
+    $('statRounds').textContent = n;
+    if(n === 0){
+      $('statWinRate').textContent = '—';
+      $('statBet').textContent = '0.00';
+      $('statNet').textContent = '0.00';
+      $('historyList').innerHTML = '<div class="empty-ledger">Nenhuma aposta registrada ainda.</div>';
+      return;
+    }
+    const wins = state.historico.filter(h => h.ganho > 0).length;
+    const totalBet = state.historico.reduce((s,h)=>s+h.aposta,0);
+    const net = state.historico.reduce((s,h)=>s+h.ganho,0);
+
+    $('statWinRate').textContent = ((wins/n)*100).toFixed(1) + '%';
+    $('statBet').textContent = totalBet.toFixed(2);
+    const netEl = $('statNet');
+    netEl.textContent = (net>=0?'+':'') + net.toFixed(2);
+    netEl.classList.toggle('pos', net > 0);
+    netEl.classList.toggle('neg', net < 0);
+
+    const labels = {cara_ou_coroa: 'Moeda', dado_da_sorte: 'Dado', caca_niquel: 'Slot'};
+    const rows = state.historico.slice(-40).map(h => {
+      const cls = h.ganho > 0 ? 'pos' : (h.ganho < 0 ? 'neg' : '');
+      return `<div class="history-row">
+        <span class="g">${labels[h.jogo]}</span>
+        <span class="r">${h.resultado}</span>
+        <span class="a">${h.aposta.toFixed(2)}</span>
+        <span class="d ${cls}">${h.ganho>=0?'+':''}${h.ganho.toFixed(2)}</span>
+      </div>`;
+    }).reverse().join('');
+    $('historyList').innerHTML = rows;
+  }
+
+  function getBet(inputId){
+    const el = $(inputId);
+    const val = parseFloat(el.value);
+    if(!val || val <= 0){
+      flashResult(inputId.includes('coin') ? 'result-coin' : inputId.includes('dice') ? 'result-dice' : 'result-slot',
+        'A aposta deve ser maior que zero.', 'lose');
+      return null;
+    }
+    if(val > state.saldo){
+      flashResult(inputId.includes('coin') ? 'result-coin' : inputId.includes('dice') ? 'result-dice' : 'result-slot',
+        'Saldo insuficiente para essa aposta.', 'lose');
+      return null;
+    }
+    return val;
+  }
+
+  function flashResult(elId, text, cls){
+    const el = $(elId);
+    el.textContent = text;
+    el.className = 'result-line ' + (cls || '');
+  }
+
+  // ---------- Tabs ----------
+  const tabs = document.querySelectorAll('.tab');
+  const panels = { coin: $('panel-coin'), dice: $('panel-dice'), slot: $('panel-slot') };
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected','false'); });
+      tab.classList.add('active'); tab.setAttribute('aria-selected','true');
+      Object.values(panels).forEach(p => p.style.display = 'none');
+      panels[tab.dataset.game].style.display = 'block';
+    });
+  });
+
+  // ---------- Chip buttons ----------
+  document.querySelectorAll('.chip-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const target = $(btn.dataset.target);
+      const add = parseFloat(btn.dataset.val);
+      const current = parseFloat(target.value) || 0;
+      target.value = current + add;
+    });
+  });
+
+  // ---------- Coin choice ----------
+  document.querySelectorAll('#panel-coin .choice-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#panel-coin .choice-btn').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state.coinChoice = btn.dataset.choice;
+    });
+  });
+
+  // ---------- Dice choice ----------
+  document.querySelectorAll('#diePicker button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#diePicker button').forEach(b => b.classList.remove('selected'));
+      btn.classList.add('selected');
+      state.diceChoice = parseInt(btn.dataset.n, 10);
+    });
+  });
+
+  // ---------- Coin play ----------
+  $('play-coin').addEventListener('click', () => {
+    const aposta = getBet('bet-coin');
+    if(aposta === null) return;
+    const prevSaldo = state.saldo;
+    const resultado = Math.random() < 0.5 ? 'cara' : 'coroa';
+    const venceu = resultado === state.coinChoice;
+    const ganho = venceu ? aposta : -aposta;
+    state.saldo += ganho;
+
+    const stage = $('stage-coin');
+    stage.innerHTML = `<span class="coin anim-flip">${resultado === 'cara' ? '🪙' : '🥈'}</span>`;
+    flashResult('result-coin',
+      `Saiu ${resultado.toUpperCase()} — você escolheu ${state.coinChoice.toUpperCase()}. ${venceu ? 'Você ganhou!' : 'Você perdeu.'}`,
+      venceu ? 'win' : 'lose');
+
+    registrar('cara_ou_coroa', aposta, resultado, ganho);
+    refreshHeader(prevSaldo);
+  });
+
+  // ---------- Dice play ----------
+  $('play-dice').addEventListener('click', () => {
+    const aposta = getBet('bet-dice');
+    if(aposta === null) return;
+    const prevSaldo = state.saldo;
+    const resultado = Math.floor(Math.random()*6)+1;
+    const venceu = resultado === state.diceChoice;
+    const ganho = venceu ? aposta*5 : -aposta;
+    state.saldo += ganho;
+
+    const faces = ['','⚀','⚁','⚂','⚃','⚄','⚅'];
+    const stage = $('stage-dice');
+    stage.innerHTML = `<span class="die-face anim-tumble">${faces[resultado]}</span>`;
+    flashResult('result-dice',
+      `O dado caiu em ${resultado} — você apostou em ${state.diceChoice}. ${venceu ? 'Pagamento 6×!' : 'Você perdeu.'}`,
+      venceu ? 'win' : 'lose');
+
+    registrar('dado_da_sorte', aposta, String(resultado), ganho);
+    refreshHeader(prevSaldo);
+  });
+
+  // ---------- Slot play ----------
+  const SYMS = ['🍒','🍋','🍉','⭐','7️⃣'];
+  const WEIGHTS = [35,30,20,10,5];
+  const PAYOUT = {'🍒':3,'🍋':5,'🍉':8,'⭐':15,'7️⃣':50};
+
+  function weightedPick(){
+    const total = WEIGHTS.reduce((a,b)=>a+b,0);
+    let r = Math.random()*total;
+    for(let i=0;i<SYMS.length;i++){
+      if(r < WEIGHTS[i]) return SYMS[i];
+      r -= WEIGHTS[i];
+    }
+    return SYMS[SYMS.length-1];
+  }
+
+  $('play-slot').addEventListener('click', () => {
+    const aposta = getBet('bet-slot');
+    if(aposta === null) return;
+    const prevSaldo = state.saldo;
+    const roll = [weightedPick(), weightedPick(), weightedPick()];
+
+    let ganho, msg, cls;
+    if(roll[0]===roll[1] && roll[1]===roll[2]){
+      const mult = PAYOUT[roll[0]];
+      ganho = aposta*(mult-1);
+      msg = `Trinca de ${roll[0]}! Multiplicador ${mult}×.`;
+      cls = 'win';
+    } else if(new Set(roll).size === 2){
+      ganho = aposta*0.5;
+      msg = 'Duas iguais — metade da aposta devolvida.';
+      cls = 'push';
+    } else {
+      ganho = -aposta;
+      msg = 'Sem combinação. Você perdeu.';
+      cls = 'lose';
+    }
+    state.saldo += ganho;
+
+    const stage = $('stage-slot');
+    stage.innerHTML = roll.map(s => `<span class="reel anim-pop">${s}</span>`).join('');
+    flashResult('result-slot', msg, cls);
+
+    registrar('caca_niquel', aposta, roll.join(''), ganho);
+    refreshHeader(prevSaldo);
+  });
+
+  // ---------- Reset ----------
+  $('resetBtn').addEventListener('click', () => {
+    state.saldo = 100;
+    state.historico = [];
+    refreshHeader();
+    refreshLedger();
+    ['result-coin','result-dice','result-slot'].forEach(id => flashResult(id, '', ''));
+    $('stage-coin').innerHTML = '<span class="empty-hint">aguardando aposta</span>';
+    $('stage-dice').innerHTML = '<span class="empty-hint">aguardando aposta</span>';
+    $('stage-slot').innerHTML = '<span class="reel">🎰</span><span class="reel">🎰</span><span class="reel">🎰</span>';
+  });
+
+  refreshHeader();
+  refreshLedger();
+})();
+</script>
+</body>
+</html>
